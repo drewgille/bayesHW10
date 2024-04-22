@@ -4,6 +4,102 @@ output: html_document
 date: "2024-04-21"
 ---
 
+# 2
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+Y <- readRDS("birdCount.rds")
+Y <- as.data.frame(Y)
+Y.grouped <- Y%>%
+  group_by(county)%>%
+  summarize(sum = sum(birdCount))
+sum.y <- Y.grouped$sum
+Y.grouped2 <- Y%>%
+  group_by(county)%>%
+  filter(birdCount != 0)%>%
+  summarize(length = n())
+n <- Y.grouped2$length
+
+
+```
+
+
+```{r}
+#initialize
+alpha <- 10
+a <- 2
+b <- 1/2
+THETA <- NULL
+MU <- NULL
+mu <- mean(sum.y/n)
+
+#Gibbs
+S <- 100
+for (s in 1:S){
+  
+  #sample thetas
+  theta <- c(rep(0, 16))
+  for(j in 1:16){
+    theta[j] <- rgamma(1, alpha+sum.y[j], n[j]+alpha/mu)
+  }
+  
+  #sample mu
+  inv.mu <- rgamma(1, a, b+(alpha)*sum(theta))
+  mu <- 1/inv.mu
+  
+  #store
+  
+  THETA <- cbind(THETA, theta)
+  MU <- cbind(MU, mu)
+  
+  
+  
+  
+}
+```
+
+```{r}
+plot(density(MU))
+x <- 0:10000
+gam <- dgamma(x, a, b)
+inv.gam <- 1/gam
+lines(x, inv.gam, type="l", col="red", lwd=2)
+```
+```{r}
+plot(x, inv.gam, type="l")
+```
+
+```{r}
+theta.means <- rowMeans(THETA)
+df <- data.frame(n, theta.means)
+ggplot(df, aes(x=n, y=theta.means))+
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+sample.means <- sum.y/n
+df2 <- data.frame(n, sample.means)
+ggplot(df, aes(x=n, y=sample.means))+
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+distance <- sample.means - theta.means
+df3 <- data.frame(n, distance)
+ggplot(df, aes(x=n, y=distance))+
+  geom_point()+
+  geom_smooth()
+```
+As we can see in this last graph, as sample size gets bigger, a county's estimate of $\theta_j$ gets closer to its sample mean $\overline{y}_j$.
+
 
 # 3
 
