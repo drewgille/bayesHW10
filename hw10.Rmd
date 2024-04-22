@@ -1,0 +1,110 @@
+---
+title: "hw10"
+output: html_document
+date: "2024-04-21"
+---
+
+# 3
+
+```{r}
+#Gibbs
+
+delta.prior <- c(0.45, 0.1, 0.45)
+mu.delta <- c(-3, 0, 3)
+sigma2.delta <- c(1/3, 1/3, 1/3)
+delta <- sample(1:3, size = 1, prob = delta.prior)
+THETA <- NULL
+DELTA <- NULL
+S <- 10000
+
+for (s in 1:S){
+  #generate theta
+  theta <- rnorm(1, mu.delta[delta], sqrt(sigma2.delta[delta]))
+  
+  #generate delta
+  delta.post <- rep(0, 3)
+  for (i in 1:3) {
+    delta.post[i] <- delta.prior[i] * dnorm(theta, mean = mu.delta[i], sd = sqrt(sigma2.delta[i]))
+  }
+  delta.post <- delta.post/sum(delta.post)
+  delta <- sample(1:3, size = 1, prob = delta.post)
+  
+  #store values
+  THETA[s] <- theta
+  DELTA[s] <- delta
+  
+}
+```
+
+```{r}
+# Metropolis
+
+delta.prior <- c(0.45, 0.1, 0.45)
+mu.delta <- c(-3, 0, 3)
+sigma2.delta <- c(1/3, 1/3, 1/3)
+THETA.m <- NULL
+DELTA.m <- NULL
+delta <- sample(1:3, size = 1, prob = delta.prior)
+theta <- rnorm(1, mu.delta[delta], sqrt(sigma2.delta[delta]))
+S <- 10000
+
+for (s in 1:S){
+  
+  #generate theta
+  theta <- rnorm(1, mu.delta[delta], sqrt(sigma2.delta[delta]))
+  
+  #simulate theta.star
+  theta.star <- rnorm(1, theta, 2)
+
+  
+  #generate delta
+  delta.post <- rep(0, 3)
+  for (i in 1:3) {
+    delta.post[i] <- delta.prior[i] * dnorm(theta, mean = mu.delta[i], sd = sqrt(sigma2.delta[i]))
+  }
+  delta.post <- delta.post/sum(delta.post)
+  delta <- sample(1:3, size = 1, prob = delta.post)
+  
+  
+  
+    #compute Metropolis ratio
+  log.r <- sum((dnorm(delta, theta.star, sqrt(sigma2.delta[delta]), log = TRUE)) +
+    dnorm(theta.star, mu.delta[delta], 2, log = TRUE)) -
+    sum((dnorm(delta, theta, sqrt(sigma2.delta[delta]), log = TRUE)) +
+    dnorm(theta, mu.delta[delta], 2, log = TRUE))
+  
+  if(log(runif(1)) < log.r){
+    theta <- theta.star
+  }
+  
+  
+  THETA.m <- c(THETA.m, theta)
+  DELTA.m <- c(DELTA.m, delta)
+  
+  
+}
+```
+
+```{r}
+#traceplots
+plot(THETA, type="l")
+plot(THETA.m, type="l")
+```
+```{r}
+acf(THETA)
+acf(THETA.m)
+```
+The acf plot for the Metropolis algorithm converges quicker than that of the original Gibbs sampler.
+
+```{r}
+library(coda)
+effectiveSize(THETA)
+effectiveSize(THETA.m)
+```
+The effective sample size for the Metropolis algorithm Gibbs sampler is greater than that of the original Gibbs sampler.
+
+```{r}
+hist(THETA, freq=FALSE, breaks=20)
+hist(THETA.m, freq=FALSE, breaks=20)
+```
+The first histogram is heavier towards THETA==-3, whereas the second is more symmetric.
